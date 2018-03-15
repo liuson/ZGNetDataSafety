@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F119D076205A4B2D00BF010F /* ZGMD5.m in Sources */ = {isa = PBXBuildFile; fileRef = F119D075205A4B2D00BF010F /* ZGMD5.m */; };
 		F11E24C42057A9C200146C91 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = F11E24C32057A9C200146C91 /* AppDelegate.m */; };
 		F11E24C72057A9C200146C91 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F11E24C62057A9C200146C91 /* ViewController.m */; };
 		F11E24CA2057A9C200146C91 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F11E24C82057A9C200146C91 /* Main.storyboard */; };
@@ -41,6 +42,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		F119D074205A4B2D00BF010F /* ZGMD5.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ZGMD5.h; sourceTree = "<group>"; };
+		F119D075205A4B2D00BF010F /* ZGMD5.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ZGMD5.m; sourceTree = "<group>"; };
 		F11E24BF2057A9C200146C91 /* ZGDataSafety.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZGDataSafety.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F11E24C22057A9C200146C91 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		F11E24C32057A9C200146C91 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -168,6 +171,8 @@
 		F11E24FC2057C38E00146C91 /* ZGMD5 */ = {
 			isa = PBXGroup;
 			children = (
+				F119D074205A4B2D00BF010F /* ZGMD5.h */,
+				F119D075205A4B2D00BF010F /* ZGMD5.m */,
 			);
 			path = ZGMD5;
 			sourceTree = "<group>";
@@ -328,6 +333,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11E24C72057A9C200146C91 /* ViewController.m in Sources */,
+				F119D076205A4B2D00BF010F /* ZGMD5.m in Sources */,
 				F11E24FA2057AB1E00146C91 /* ZGBase64.m in Sources */,
 				F11E24D22057A9C200146C91 /* main.m in Sources */,
 				F11E25082057D94B00146C91 /* ZGKeychainItemWrapper.m in Sources */,
@@ -498,6 +504,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = S6K9YUMR7H;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
 				INFOPLIST_FILE = ZGDataSafety/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
@@ -513,6 +520,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = S6K9YUMR7H;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
 				INFOPLIST_FILE = ZGDataSafety/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";

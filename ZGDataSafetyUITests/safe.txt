@@ -1,0 +1,192 @@
+
+HTTPS基本使用
+
+// 1.创建session
+NSURLSession *session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration defaultSessionConfiguration] delegate:self delegateQueue:[NSOperationQueue mainQueue]];
+// 2.创建Task
+NSURLSessionDataTask *dataTask = [session dataTaskWithRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://kyfw.12306.cn/otn"]] completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) { 
+    // 3.解析数据
+    NSLog(@"%@---%@",[[NSString alloc]initWithData:data encoding:NSUTF8StringEncoding],error);
+}];
+// 4.执行task
+[dataTask resume];
+
+#pragma mark - 遵守<NSURLSessionDataDelegate>
+// 如果发送的请求是https的,那么才会调用该方法
+-(void)URLSession:(NSURLSession *)session didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition, NSURLCredential * _Nullable))completionHandler {
+    /**
+     判断服务器传给我们的信任的类型，只有是【服务器信任的时候，才安装证书】
+     NSURLSessionAuthChallengeDisposition 如何处理证书
+     NSURLAuthenticationMethodServerTrust 服务器信任
+     */
+    if(![challenge.protectionSpace.authenticationMethod isEqualToString:@"NSURLAuthenticationMethodServerTrust"]) {
+        return;
+    }
+    NSLog(@"%@",challenge.protectionSpace);
+    /*
+     NSURLCredential 授权信息
+     NSURLSessionAuthChallengeUseCredential = 0, 使用该证书 安装该证书
+     NSURLSessionAuthChallengePerformDefaultHandling = 1, 默认采用的方式,该证书被忽略
+     NSURLSessionAuthChallengeCancelAuthenticationChallenge = 2, 取消请求,证书忽略
+     NSURLSessionAuthChallengeRejectProtectionSpace = 3,          拒绝
+     */
+    NSURLCredential *credential = [[NSURLCredential alloc]initWithTrust:challenge.protectionSpace.serverTrust];
+    completionHandler(NSURLSessionAuthChallengeUseCredential,credential);
+    // 注意：并不是所有的https的请求都需要安装证书(授权)的，请求一些大型的网站有的是强制安装的，如：苹果官网https://www.apple.com
+}
+————————————————————————————
+
+SSKeyChain
+
+使用苹果自己的SSKeyChain钥匙串，我们也能保证用户的数据安全，我们将用户的账号信息保存到钥匙串中能保证数据安全的原因是因为只有苹果公司才知道钥匙串保存在内存中的哪个位置。
+使用SSKeyChain我们进行下面两步骤操作：
+1、 在工程中加入Security.framework框架。
+2、 把SSKeychain.h和SSKeychain.m加到项目文件夹。
+加入了需要的文件夹后，SSKeyChain的作者samsoffes在实例代码中给出了使用SSKeyChain的方法。
+
+我们通过下面方法来使用SSKeyChain。
+//获取所有账号+ (NSArray *)allAccounts;//通过账号名字获取服务名+ (NSArray *)accountsForService:(NSString *)serviceName;//通过服务名和账号获取密码+ (NSString *)passwordForService:(NSString*)serviceNameaccount:(NSString *)account;//通过服务名和账号删除密码+ (BOOL)deletePasswordForService:(NSString*)serviceNameaccount:(NSString *)account;//通过服务名和账号设置密码+ (BOOL)setPassword:(NSString *)passwordforService:(NSString*)serviceName account:(NSString *)account;
+ 
+
+下面是具体的使用方法，通过上面几个方法，我们可以很方便地将用户账号保存到钥匙串，或者从钥匙串中取出来。
+#import <SenTestingKit/SenTestingKit.h>#import "SSKeychain.h"//用变量接受服务名，账号和密码static NSString *kSSToolkitTestsServiceName = @"SSToolkitTestService";static NSString *kSSToolkitTestsAccountName = @"SSToolkitTestAccount";static NSString *kSSToolkitTestsPassword = @"SSToolkitTestPassword";@interface SSKeychainTests : SenTestCase//判断钥匙串所有账号中是否包含一个指定的账号- (BOOL)_accounts:(NSArray *)accounts containsAccountWithName:(NSString *)name;@end@implementation SSKeychainTests- (void)testAll {// Getting & Setings Passwords[SSKeychain setPassword:kSSToolkitTestsPassword forService:kSSToolkitTestsServiceName account:kSSToolkitTestsAccountName];NSString *password = [SSKeychain passwordForService:kSSToolkitTestsServiceName account:kSSToolkitTestsAccountName];
+
+STAssertEqualObjects(password, kSSToolkitTestsPassword, @"Password reads and writes");// Getting AccountsNSArray *accounts = [SSKeychain allAccounts];
+
+STAssertTrue([self _accounts:accounts containsAccountWithName:kSSToolkitTestsAccountName], @"All accounts");
+
+accounts = [SSKeychain accountsForService:kSSToolkitTestsServiceName];
+
+STAssertTrue([self _accounts:accounts containsAccountWithName:kSSToolkitTestsAccountName], @"Account for service");// Deleting Passwords[SSKeychain deletePasswordForService:kSSToolkitTestsServiceName account:kSSToolkitTestsAccountName];
+
+password = [SSKeychain passwordForService:kSSToolkitTestsServiceName account:kSSToolkitTestsAccountName];
+
+STAssertNil(password, @"Password deletes");
+}
+
+
+- (BOOL)_accounts:(NSArray *)accounts containsAccountWithName:(NSString *)name {for (NSDictionary *dictionary in accounts) {      if ([[dictionary objectForKey:@"acct"] isEqualToString:name]) {return YES;
+}
+
+}return NO;
+}
+
+
+通过下面的代码，我们能够自己生成一个数字证书。
+// 生成1024位私钥 openssl genrsa -out private_key.pem 1024 // 根据私钥生成CSR文件 openssl req -new -key private_key.pem -out rsaCertReq.csr // 根据私钥和CSR文件生成crt文件 openssl x509 -req -days 3650 -in rsaCertReq.csr -signkey private_key.pem -out rsaCert.crt
+
+ // 为IOS端生成公钥der文件 openssl x509 -outform der -in rsaCert.crt -out public_key.der
+
+ // 将私钥导出为这p12文件 openssl pkcs12 -export -out private_key.p12 -inkey private_key.pem -in rsaCert.crt
+ 
+
+得到公钥和私钥后就可以将数据进行加密了。我们把一个字符串用RAS算法加密后查看加密后的字符串，再反编码看到解密后的字符串，查看加密和解密的效果。
+
+NSString *encryptString = [self rsaEncryptText:@"123456好哇好哇哈"]; 
+
+NSLog(@"加密：123456好哇好哇哈：%@", encryptString); NSLog(@"解密结果为：%@", [self rsaDecryptWithText:encryptString]);
+ 
+
+然后我们自己定义加密和解密的方法，等下我们就要使用加密和解密的方法来进行数据的加密和解密。
+
+插入自定义加密和解密的方法。
+#import <Foundation/Foundation.h>@interface HYBRSAEncrypt : NSObject// 加密相关- (void)loadPublicKeyWithPath:(NSString *)derFilePath;
+- (void)loadPublicKeyWithData:(NSData *)derData;
+- (NSString *)rsaEncryptText:(NSString *)text;
+- (NSData *)rsaEncryptData:(NSData *)data;// 解密相关- (void)loadPrivateKeyWithPath:(NSString *)p12FilePath password:(NSString *)p12Password;
+- (void)loadPrivateKeyWithData:(NSData *)p12Data password:(NSString *)p12Password;
+- (NSString *)rsaDecryptText:(NSString *)text;
+- (NSData *)rsaDecryptData:(NSData *)data;@end
+
+ 
+
+加密过程中的思路是：
+1、定义一个方法，把证书文件需要加密的数据传入一个方法中，生成一个公钥。
+
+2、创建一个能够将数据进行base64加密的方法。将需要加密的文本通过base加密，加密完成后再调用公钥加密的方法对base加密后的数据进行二次加密。加密时是讲二进制数据分段，切片后进行加密再拼接到二进制数据的变量中。
+
+#import "HYBRSAEncrypt.h"@interface HYBRSAEncrypt () {
+  SecKeyRef _publicKey;
+  SecKeyRef _privateKey;
+}@end@implementation HYBRSAEncrypt- (void)dealloc {  if (nil != _publicKey) {    CFRelease(_publicKey);
+  }  if (nil != _privateKey) {    CFRelease(_privateKey);
+  }
+}#pragma mark - 加密相关//用本地证书加载公钥- (void)loadPublicKeyWithPath:(NSString *)derFilePath {  NSData *derData = [[NSData alloc] initWithContentsOfFile:derFilePath];  if (derData.length > 0) {
+    [self loadPublicKeyWithData:derData];
+  } else {    NSLog(@"load public key fail with path: %@", derFilePath);
+  }
+}//加载公钥方法- (void)loadPublicKeyWithData:(NSData *)derData {
+  SecCertificateRef myCertificate = SecCertificateCreateWithData(kCFAllocatorDefault, (__bridge CFDataRef)derData);
+  SecPolicyRef myPolicy = SecPolicyCreateBasicX509();
+  SecTrustRef myTrust;
+  OSStatus status = SecTrustCreateWithCertificates(myCertificate,myPolicy,&myTrust);
+  SecTrustResultType trustResult;  if (status == noErr) {
+    status = SecTrustEvaluate(myTrust, &trustResult);
+  }
+
+  SecKeyRef securityKey = SecTrustCopyPublicKey(myTrust);  CFRelease(myCertificate);  CFRelease(myPolicy);  CFRelease(myTrust);
+
+  _publicKey = securityKey;
+}//将文本内容加密- (NSString *)rsaEncryptText:(NSString *)text {  NSData *encryptedData = [self rsaEncryptData:[text hdf_toData]];  NSString *base64EncryptedString = [NSString hdf_base64StringFromData:encryptedData
+                                 length:encryptedData.length];  return base64EncryptedString;
+}//分段再加密数据- (NSData *)rsaEncryptData:(NSData *)data {
+  SecKeyRef key = _publicKey;
+
+  size_t cipherBufferSize = SecKeyGetBlockSize(key);
+  uint8_t *cipherBuffer = malloc(cipherBufferSize * sizeof(uint8_t));
+  size_t blockSize = cipherBufferSize - 11;
+  size_t blockCount = (size_t)ceil([data length] / (double)blockSize);  NSMutableData *encryptedData = [[NSMutableData alloc] init] ;  for (int i = 0; i < blockCount; i++) {
+    size_t bufferSize = MIN(blockSize,[data length] - i * blockSize);    NSData *buffer = [data subdataWithRange:NSMakeRange(i * blockSize, bufferSize)];
+    OSStatus status = SecKeyEncrypt(key,
+                    kSecPaddingPKCS1,
+                    (const uint8_t *)[buffer bytes],
+                    [buffer length],
+                    cipherBuffer,
+                    &cipherBufferSize);    if (status == noErr) {      NSData *encryptedBytes = [[NSData alloc] initWithBytes:(const void *)cipherBuffer
+                              length:cipherBufferSize];
+      [encryptedData appendData:encryptedBytes];
+    } else {      if (cipherBuffer) {
+        free(cipherBuffer);
+      }      return nil;
+    }
+  }  if (cipherBuffer){
+    free(cipherBuffer);
+  }  return encryptedData;
+}
+ 
+
+然后我们可以通过私钥解密。解密思路和加密过程相同。
+#pragma mark - 解密相关- (void)loadPrivateKeyWithPath:(NSString *)p12FilePath password:(NSString *)p12Password {  NSData *data = [NSData dataWithContentsOfFile:p12FilePath];  if (data.length > 0) {
+    [self loadPrivateKeyWithData:data password:p12Password];
+  } else {    NSLog(@"load private key fail with path: %@", p12FilePath);
+  }
+}//生成私钥- (void)loadPrivateKeyWithData:(NSData *)p12Data password:(NSString *)p12Password {
+  SecKeyRef privateKeyRef = NULL;  NSMutableDictionary * options = [[NSMutableDictionary alloc] init];
+
+  [options setObject:p12Password forKey:(__bridge id)kSecImportExportPassphrase];  CFArrayRef items = CFArrayCreate(NULL, 0, 0, NULL);
+  OSStatus securityError = SecPKCS12Import((__bridge CFDataRef)p12Data,
+                      (__bridge CFDictionaryRef)options,
+                      &items);  if (securityError == noErr && CFArrayGetCount(items) > 0) {    CFDictionaryRef identityDict = CFArrayGetValueAtIndex(items, 0);
+    SecIdentityRef identityApp = (SecIdentityRef)CFDictionaryGetValue(identityDict,
+                                     kSecImportItemIdentity);
+    securityError = SecIdentityCopyPrivateKey(identityApp, &privateKeyRef);    if (securityError != noErr) {
+      privateKeyRef = NULL;
+    }
+  }
+
+  _privateKey = privateKeyRef;  // CFRelease(items);}//调用下面方法进行解密，最后返回一个字符串- (NSString *)rsaDecryptText:(NSString *)text {  NSData *data = [NSData hdf_base64DataFromString:text];  NSData *decryptData = [self rsaDecryptData:data];  NSString *result = [[NSString alloc] initWithData:decryptData encoding:NSUTF8StringEncoding];  return result;
+}//用私钥解密的方法，被上面方法调用- (NSData *)rsaDecryptData:(NSData *)data {
+  SecKeyRef key = _privateKey;
+
+  size_t cipherLen = [data length];  void *cipher = malloc(cipherLen);
+
+  [data getBytes:cipher length:cipherLen];
+  size_t plainLen = SecKeyGetBlockSize(key) - 12;  void *plain = malloc(plainLen);
+  OSStatus status = SecKeyDecrypt(key, kSecPaddingPKCS1, cipher, cipherLen, plain, &plainLen);  if (status != noErr) {    return nil;
+  }  NSData *decryptedData = [[NSData alloc] initWithBytes:(const void *)plain length:plainLen];  return decryptedData;
+}@end
+ 
+　　
+
+ 
+
